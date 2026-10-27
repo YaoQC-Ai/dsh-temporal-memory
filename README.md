@@ -225,7 +225,7 @@ Effective values merge three sources; later wins:
 | `growth.enabled` | `false` | Monthly L4 revision from the previous month's evidence |
 | `compile.minRecords` | `2` | Records per topic before `memory_compile` creates a page |
 | `compile.maxTopics` | `20` | Topics per compile run |
-| `ui.host` / `ui.port` | `127.0.0.1` / `8790` | Standalone console; loopback only. Hidden in Settings |
+| `ui.host` / `ui.port` | `127.0.0.1` / `18790` | Compatibility field; the host opens no listener. Standalone console reads it. Loopback only |
 
 Saving in Settings writes the whole `config.json`, so a saved value keeps winning over a changed
 code default. Each field shows its effective source, and a field overridden by the profile patch is
@@ -235,7 +235,7 @@ For headless setups, the standalone console is loopback-only and also shows laye
 read-only memory browser:
 
 ```bash
-node scripts/config-ui.mjs                                   # ~/.dsh, port 8790, auto-increments if busy
+node scripts/config-ui.mjs                                   # ~/.dsh, port 18790, auto-increments if busy
 node scripts/config-ui.mjs --home /path/to/DSH_HOME
 node scripts/config-ui.mjs --root /path/to/DSH_HOME/memory/temporal
 ```
@@ -322,7 +322,7 @@ The package ships three local CLIs. Run them from the installed package director
 (`node_modules/dsh-temporal-memory`) or with an explicit path:
 
 ```bash
-# Settings console + read-only memory browser (127.0.0.1:8790 by default)
+# Settings console + read-only memory browser (127.0.0.1:18790 by default)
 node scripts/config-ui.mjs --home "$DSH_HOME"
 
 # Export L1 records to JSONL (stdout unless --out is given)
@@ -538,14 +538,14 @@ L4  用户 / Agent 画像       每月一次，可选，规则归纳
 | `growth.enabled` | `false` | L4 月度成长开关：根据上月证据修订软画像 |
 | `compile.minRecords` | `2` | `memory_compile` 成页所需的同主题记录数 |
 | `compile.maxTopics` | `20` | 单次编译的主题上限 |
-| `ui.host` / `ui.port` | `127.0.0.1` / `8790` | 独立配置台；仅回环地址。设置页已隐藏 |
+| `ui.host` / `ui.port` | `127.0.0.1` / `18790` | 兼容字段；宿主不再监听。独立配置台读取该值，仅回环地址 |
 
 设置页保存是**全量写入**：保存过一次后，`config.json` 的值就会一直优先于代码默认值。每个字段标注生效来源；被 profile patch 覆盖的字段在页面上只读。
 
 无图形环境时用独立配置台（只监听回环地址，也可查看分层状态与只读记忆浏览）：
 
 ```bash
-node scripts/config-ui.mjs                                   # ~/.dsh，端口 8790，占用时自动顺延
+node scripts/config-ui.mjs                                   # ~/.dsh，端口 18790，占用时自动顺延
 node scripts/config-ui.mjs --home /path/to/DSH_HOME
 node scripts/config-ui.mjs --root /path/to/DSH_HOME/memory/temporal
 ```
@@ -607,7 +607,7 @@ node scripts/config-ui.mjs --root /path/to/DSH_HOME/memory/temporal
 或使用显式路径：
 
 ```bash
-# 设置台 + 只读记忆浏览器（默认 127.0.0.1:8790）
+# 设置台 + 只读记忆浏览器（默认 127.0.0.1:18790）
 node scripts/config-ui.mjs --home "$DSH_HOME"
 
 # 导出 L1 记录到 JSONL（不给 --out 时输出到 stdout）

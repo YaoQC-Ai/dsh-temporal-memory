@@ -11,10 +11,19 @@ All notable changes to this project are documented here. The format follows
 - The concept compiler now writes the index entry for a newly created page into that page's namespace
   instead of the default namespace. This fix was listed under 1.4.1 but was missing from the published
   1.4.1 package; it is included here with a regression test.
+- A newline is no longer treated as a sentence boundary. A multi-line message is one record, not
+  several records sharing the same quote. A newline is used only as a fallback for an overlong run
+  without punctuation; if that still does not fit, the run is hard-chunked instead of being dropped.
+  Stored text collapses newlines to spaces.
+- A quoted string containing sentence punctuation is no longer treated as a topic or entity. One
+  quoted clause could otherwise pollute every later search.
+- `DEFAULTS.ui.port` is now `18790` instead of `8790`. The field is kept for compatibility; the host
+  opens no listener, and an explicit port in an existing `config.json` is unchanged.
 
 ### Added
 
 - Repository metadata, plugin icon, and packaging for the first public release.
+- Chinese install guide (`docs/install-guide.zh.md`).
 
 ## [1.4.1] - 2026-10-26
 

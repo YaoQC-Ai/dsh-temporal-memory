@@ -3,7 +3,7 @@
  * Standalone configuration console: zero dependencies, loopback only, writes
  * only config.json.
  *
- *   node scripts/config-ui.mjs [--root <data dir>] [--home <DSH_HOME>] [--port 8790] [--host 127.0.0.1]
+ *   node scripts/config-ui.mjs [--root <data dir>] [--home <DSH_HOME>] [--port 18790] [--host 127.0.0.1]
  *
  * Prefer Settings → Memory while DSH is running; this page is for times when
  * DSH is stopped, the host has no browser UI, or the machine is headless.

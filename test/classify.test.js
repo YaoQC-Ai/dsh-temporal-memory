@@ -178,7 +178,7 @@ test('数据库连接串按凭据脱敏', () => {
 
 // 回归：无时间词的句子不得沿用同轮其他句子的「昨天」当自己的事件日。
 test('同轮无时间词的句子不继承别句的相对日', () => {
-  const { records } = run('不对啊，我记得昨天你做值守的时候还能主动推送的啊\n处理完这个事儿以后，再说下剩下两件事儿是啥')
+  const { records } = run('不对啊，我记得昨天你做值守的时候还能主动推送的啊。处理完这个事儿以后，再说下剩下两件事儿是啥')
   const plain = records.find((r) => r.text.startsWith('处理完这个事儿'))
   assert.ok(plain)
   assert.equal(plain.time_basis, 'recorded')
@@ -191,4 +191,27 @@ test('时间词修饰宾语时不算事件时间', () => {
   assert.equal(records.length, 1)
   assert.equal(records[0].time_basis, 'recorded')
   assert.equal(records[0].event_start_ms, ANCHOR)
+})
+
+// 回归：换行是排版，不是语义边界；多行消息不能拆成多条记录。
+test('换行不是句子边界，一条消息只落一条记录', () => {
+  const { records } = run('要检查三件事\n1、上下文注入有没有重复\n2、时间戳对不对。')
+  assert.equal(records.length, 1)
+  assert.ok(records[0].text.includes('上下文注入有没有重复'))
+  assert.ok(!records[0].text.includes('\n'))
+})
+
+// 回归：无标点的超长段必须降级切分，不能整段丢弃。
+test('无标点的超长段不会被丢弃', () => {
+  const { records } = run('啊'.repeat(400))
+  assert.ok(records.length >= 2)
+  assert.ok(records.every((r) => r.text.length <= 300))
+})
+
+// 回归：引号里的整句（带标点）不是名字，不能污染 topics/entities。
+test('引号里的整句不当 topic/entity', () => {
+  const { records } = run('他说「这个方案，明天再定」，先记一下')
+  assert.ok(records.length)
+  assert.ok(records.every((r) => !r.topics.includes('这个方案，明天再定')))
+  assert.ok(records.every((r) => !r.entities.includes('这个方案，明天再定')))
 })

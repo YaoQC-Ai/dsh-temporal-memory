@@ -115,7 +115,7 @@ test('memory_health 默认轻量、deep 才扫明细，并报告 root 分叉', a
   const deep = await health.execute({ deep: true })
   assert.equal(deep.capture.maxRecordsPerTurn, 8)
   assert.equal(deep.compile.minRecords, 2)
-  assert.equal(deep.ui.port, 8790)
+  assert.equal(deep.ui.port, 18790)
   assert.deepEqual(deep.digest.by_kind, {})
   assert.equal(typeof deep.journal.newest_at, 'object')
   assert.equal(typeof deep.malformed, 'number')
