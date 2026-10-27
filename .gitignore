@@ -1,0 +1,21 @@
+node_modules/
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Local DSH homes and memory stores, in case a checkout is used as --root
+.DSH/
+.dsh/
+memory/temporal/
+
+.env
+.env.*
+*.local
+
+.DS_Store
+Thumbs.db
+desktop.ini
+
+coverage/
+.nyc_output/
+*.tgz

@@ -1,0 +1,24 @@
+# Bundle layer for dsh-temporal-memory.
+#
+# Inserts only the host half. The model tools are registered by index.js with
+# the same resolved config, so they do not need a separate Loader row; a stale
+# `memory-tools` row left in an old profile is skipped automatically.
+#
+# `memory-compile` is optional and can be appended when needed. It is
+# rule-based and never calls a model.
+#
+# This plugin reads and writes only `$DSH_HOME/memory/temporal/` and shares no
+# paths with legacy memory plugins.
+#
+# Optional configuration example:
+#   - id: memory-temporal
+#     name: 'dsh-temporal-memory'
+#     config:
+#       timeZone: Asia/Shanghai
+#       retentionDays: 365
+#       inject:
+#         maxItems: 8
+#         maxTokens: 1800
+- insert:
+    - id: memory-temporal
+      name: 'dsh-temporal-memory'

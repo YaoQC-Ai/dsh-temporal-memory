@@ -1,0 +1,76 @@
+{
+  "name": "dsh-temporal-memory",
+  "version": "1.4.2",
+  "description": "Temporal layered memory for DeepSeek-Harness (dsh): dual timestamps, day recall, corrections, and selective recall injection. / 为 DSH 提供带事件时间与有效期的分层记忆。",
+  "author": "yaoqc-ai",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/YaoQC-Ai/dsh-temporal-memory.git"
+  },
+  "bugs": {
+    "url": "https://github.com/YaoQC-Ai/dsh-temporal-memory/issues"
+  },
+  "homepage": "https://github.com/YaoQC-Ai/dsh-temporal-memory#readme",
+  "icon": "./icon.svg",
+  "meta": {
+    "title": "Temporal Memory / 时序记忆",
+    "description": "Temporal layered memory for DSH: dual timestamps, day recall, corrections, and selective injection. / 为 DSH 提供带事件时间与有效期的分层记忆。"
+  },
+  "keywords": [
+    "deepseek-harness",
+    "dsh",
+    "cordis",
+    "plugin",
+    "memory",
+    "temporal"
+  ],
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./tools": "./tools.js",
+    "./compile": "./compile.js",
+    "./client": "./client.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.js",
+    "tools.js",
+    "compile.js",
+    "client.js",
+    "lib",
+    "scripts",
+    "profile",
+    "test",
+    "icon.svg",
+    "cordis.patch.yml",
+    "journal-prompt.md",
+    "README.md",
+    "CHANGELOG.md",
+    "docs",
+    "LICENSE",
+    "SECURITY.md",
+    "CONTRIBUTING.md",
+    "CODE_OF_CONDUCT.md"
+  ],
+  "scripts": {
+    "test": "node --test"
+  },
+  "engines": {
+    "dsh": ">=0.2.1-rc.3 <0.3.0-0",
+    "node": ">=20"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/dsh": "^0.2.1-rc.3"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true
+    }
+  }
+}

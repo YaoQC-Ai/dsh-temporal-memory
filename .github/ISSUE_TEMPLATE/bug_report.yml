@@ -1,0 +1,86 @@
+name: Bug report
+description: Something behaves differently from the documentation.
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not paste real memory content, credentials, tokens, or personal data.
+        Remove absolute paths and usernames from logs and config snippets.
+        Security issues belong in a private advisory, not here — see SECURITY.md.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before reporting
+      options:
+        - label: I searched existing issues.
+          required: true
+        - label: This is not a security vulnerability.
+          required: true
+  - type: input
+    id: dsh-version
+    attributes:
+      label: DSH version
+      placeholder: 0.2.1-rc.3
+    validations:
+      required: true
+  - type: input
+    id: node-version
+    attributes:
+      label: Node.js version
+      placeholder: 24.18.0
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+      placeholder: Windows 11 / Ubuntu 24.04 / macOS 15
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. ...
+        2. ...
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: config
+    attributes:
+      label: Relevant configuration
+      description: The plugin's `config` block or the fields you changed. Redact `dir`.
+      render: yaml
+    validations:
+      required: false
+  - type: textarea
+    id: health
+    attributes:
+      label: memory_health output
+      description: Lightweight output is enough. Redact memory text and absolute paths.
+      render: json
+    validations:
+      required: false
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant log lines
+      render: text
+    validations:
+      required: false

@@ -1,0 +1,453 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DSH 时间记忆 · 配置台</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #f6f7f9;
+    --panel: #ffffff;
+    --text: #1c2128;
+    --muted: #5b6572;
+    --line: #d9dee5;
+    --accent: #2563eb;
+    --ok: #15803d;
+    --warn: #b45309;
+    --err: #b91c1c;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14171c;
+      --panel: #1c2128;
+      --text: #e6e9ee;
+      --muted: #98a2b3;
+      --line: #333b46;
+      --accent: #6ea8fe;
+      --ok: #4ade80;
+      --warn: #fbbf24;
+      --err: #f87171;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 20px;
+    background: var(--bg);
+    color: var(--text);
+    font: 14px/1.6 system-ui, -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
+  }
+  header, main { max-width: 1080px; margin: 0 auto; }
+  header { margin-bottom: 16px; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  h2 { font-size: 15px; margin: 0 0 12px; }
+  .muted { color: var(--muted); font-size: 12px; }
+  section {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+  .stats { display: flex; flex-wrap: wrap; gap: 8px 20px; }
+  .stat { min-width: 96px; }
+  .stat b { display: block; font-size: 18px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px 16px; }
+  .field label { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+  .help {
+    position: relative; display: inline-flex; align-items: center; justify-content: center;
+    flex: none; width: 15px; height: 15px; border: 1px solid var(--line); border-radius: 50%;
+    font-size: 10px; line-height: 1; color: var(--muted); cursor: help;
+  }
+  .help:hover, .help:focus { color: var(--accent); border-color: var(--accent); outline: none; }
+  .help::after {
+    content: attr(data-tip);
+    position: absolute; left: 50%; bottom: calc(100% + 8px); transform: translateX(-50%);
+    z-index: 10; width: max-content; max-width: 260px; padding: 7px 9px;
+    border-radius: 6px; background: var(--text); color: var(--panel);
+    font-size: 12px; font-weight: 400; line-height: 1.5; text-align: left; white-space: normal;
+    opacity: 0; visibility: hidden; pointer-events: none; transition: opacity .12s;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, .18);
+  }
+  .help:hover::after, .help:focus::after, .help:focus-visible::after { opacity: 1; visibility: visible; }
+  .field input[type="text"], .field input[type="number"], .field select {
+    width: 100%; padding: 7px 9px; border: 1px solid var(--line); border-radius: 6px;
+    background: var(--bg); color: var(--text); font: inherit;
+  }
+  .field input:focus, .field select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .src {
+    display: inline-block; margin-top: 4px; padding: 0 6px; border: 1px solid var(--line);
+    border-radius: 999px; font-size: 11px; color: var(--muted);
+  }
+  .src-patch { color: var(--warn); border-color: var(--warn); }
+  .src-note, .risk { display: block; margin-top: 3px; font-size: 11px; color: var(--warn); }
+  .checks .src { margin: 0 0 0 2px; }
+  .checks .src-note { flex-basis: 100%; }
+  .checks { display: flex; flex-wrap: wrap; gap: 10px 18px; margin: 12px 0; }
+  .checks label { display: flex; align-items: center; gap: 6px; }
+  .actions { display: flex; align-items: center; gap: 12px; margin-top: 14px; }
+  button {
+    padding: 8px 16px; border-radius: 6px; border: 1px solid var(--line);
+    background: var(--accent); color: #fff; font: inherit; cursor: pointer;
+  }
+  button.secondary { background: transparent; color: var(--text); }
+  button:disabled { opacity: .55; cursor: default; }
+  #save-result { font-size: 13px; }
+  .error { color: var(--err); }
+  .warn { color: var(--warn); }
+  .ok { color: var(--ok); }
+  ul.results { list-style: none; margin: 0; padding: 0; }
+  li.card { border-top: 1px solid var(--line); padding: 10px 0; }
+  li.card:first-child { border-top: 0; }
+  .row { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 12px; }
+  .tag {
+    font-size: 11px; padding: 1px 6px; border: 1px solid var(--line);
+    border-radius: 999px; color: var(--muted);
+  }
+  .tag.private { color: var(--warn); border-color: var(--warn); }
+  .text { margin: 4px 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .meta { font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
+  details summary { cursor: pointer; color: var(--muted); font-size: 12px; }
+  pre { margin: 6px 0 0; padding: 8px; background: var(--bg); border-radius: 6px; overflow: auto; font-size: 11px; }
+  .searchbar { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; align-items: end; }
+</style>
+</head>
+<body>
+<header>
+  <h1>DSH 时间记忆 · 配置台</h1>
+  <p class="muted">仅监听本机回环地址。配置写入数据目录下的 config.json，重启 DSH 后生效；记忆浏览为只读。</p>
+</header>
+<main>
+  <section>
+    <h2>运行状态</h2>
+    <div id="status" class="stats"><span class="muted">读取中…</span></div>
+    <div id="config-errors" class="muted"></div>
+    <details style="margin-top:10px">
+      <summary>数据目录与配置来源</summary>
+      <pre id="paths"></pre>
+    </details>
+  </section>
+
+  <section>
+    <h2>插件配置</h2>
+    <form id="config-form" autocomplete="off">
+      <div class="grid">
+        <div class="field"><label for="timeZone">时区（IANA）<span class="help" tabindex="0" role="img" aria-label="说明：事件日期与相对时间按此时区换算，决定「今天」「昨天」的边界。默认 Asia/Shanghai。" data-tip="事件日期与相对时间按此时区换算，决定「今天」「昨天」的边界。默认 Asia/Shanghai。">?</span></label><input type="text" id="timeZone" name="timeZone" placeholder="Asia/Shanghai"></div>
+        <div class="field"><label for="namespace">命名空间<span class="help" tabindex="0" role="img" aria-label="说明：记忆隔离分区，只有同一命名空间的记录参与召回与检索。默认 default。" data-tip="记忆隔离分区，只有同一命名空间的记录参与召回与检索。默认 default。">?</span></label><input type="text" id="namespace" name="namespace" maxlength="64"></div>
+        <div class="field"><label for="retentionDays">保留天数<span class="help" tabindex="0" role="img" aria-label="说明：记忆保留天数，默认 365 天。检索超期会返回 out_of_retention；清理只在对应事件日已有 L2 日记时执行，未覆盖记录保留。" data-tip="记忆保留天数，默认 365 天。检索超期会返回 out_of_retention；清理只在对应事件日已有 L2 日记时执行，未覆盖记录保留。">?</span></label><input type="number" id="retentionDays" name="retentionDays" min="1" max="36500"><span class="risk">风险：调小会在当天日记写好之后清理旧记录；调大占更多磁盘。</span></div>
+        <div class="field"><label for="entities">已知实体（逗号分隔）<span class="help" tabindex="0" role="img" aria-label="说明：预先告知的专有名词；对话中出现时写入 entities，增强主题关联与时间线检索。逗号分隔，最多 100 项。" data-tip="预先告知的专有名词；对话中出现时写入 entities，增强主题关联与时间线检索。逗号分隔，最多 100 项。">?</span></label><input type="text" id="entities" name="entities" placeholder="示例网关, 示例系统"></div>
+      </div>
+
+      <div class="checks">
+        <label><input type="checkbox" name="capture.enabled"> 捕获记忆<span class="help" tabindex="0" role="img" aria-label="说明：关闭后不再从新对话抽取写入记忆，已有记录保留。" data-tip="关闭后不再从新对话抽取写入记忆，已有记录保留。">?</span></label>
+        <label><input type="checkbox" name="inject.enabled"> 按需注入<span class="help" tabindex="0" role="img" aria-label="说明：关闭后不再把记忆块自动插入对话；模型仍可主动调用记忆工具查询。" data-tip="关闭后不再把记忆块自动插入对话；模型仍可主动调用记忆工具查询。">?</span></label>
+        <label><input type="checkbox" name="privacy.enhanced"> 隐私增强<span class="help" tabindex="0" role="img" aria-label="说明：默认关闭。关闭时普通偏好按本地个人数据保存；开启后对普通内容做更严格的脱敏或不落盘。凭据（API key、密码、token、私钥、连接串）始终硬脱敏，与开关无关。" data-tip="默认关闭。关闭时普通偏好按本地个人数据保存；开启后对普通内容做更严格的脱敏或不落盘。凭据（API key、密码、token、私钥、连接串）始终硬脱敏，与开关无关。">?</span></label>
+        <label><input type="checkbox" name="growth.enabled"> 允许每月更新 Agent 性格<span class="help" tabindex="0" role="img" aria-label="说明：默认关闭。开启后每月首次启动归纳上月记忆，产出一份软画像并每会话注入一次；只按表达风格、主动性、提醒方式成长，不改系统角色、安全策略与权限；每次变更留 diff 与审计，人工编辑画像后停止覆盖。" data-tip="默认关闭。开启后每月首次启动归纳上月记忆，产出一份软画像并每会话注入一次；只按表达风格、主动性、提醒方式成长，不改系统角色、安全策略与权限；每次变更留 diff 与审计，人工编辑画像后停止覆盖。">?</span></label>
+      </div>
+      <p class="muted" style="margin:-4px 0 6px">L4 成长开关默认关闭；开启后每月首次启动归纳上月 L1/L2/L3 写出软画像并每会话注入一次，证据不足则保持原状。</p>
+
+      <div class="grid">
+        <div class="field"><label for="capture.maxRecordsPerTurn">每轮最多记录数<span class="help" tabindex="0" role="img" aria-label="说明：单轮对话最多落盘多少条记忆；超出时优先保留执行结果。1–50，默认 8。" data-tip="单轮对话最多落盘多少条记忆；超出时优先保留执行结果。1–50，默认 8。">?</span></label><input type="number" id="capture.maxRecordsPerTurn" name="capture.maxRecordsPerTurn" min="1" max="50"></div>
+        <div class="field"><label for="inject.maxItems">注入条数上限<span class="help" tabindex="0" role="img" aria-label="说明：单次自动注入最多几条记忆。1–50，默认 6。" data-tip="单次自动注入最多几条记忆。1–50，默认 6。">?</span></label><input type="number" id="inject.maxItems" name="inject.maxItems" min="1" max="50"></div>
+        <div class="field"><label for="inject.maxTokens">注入 Token 预算<span class="help" tabindex="0" role="img" aria-label="说明：记忆块的长度上限，按字符量与 Token 估算共同约束；中文约 1 字 1 Token。100–8000，默认 1200。" data-tip="记忆块的长度上限，按字符量与 Token 估算共同约束；中文约 1 字 1 Token。100–8000，默认 1200。">?</span></label><input type="number" id="inject.maxTokens" name="inject.maxTokens" min="100" max="8000"></div>
+        <div class="field"><label for="inject.coldStartDays">冷启动回看天数<span class="help" tabindex="0" role="img" aria-label="说明：新会话或压缩后，自动回顾最近几天的记忆；0 表示关闭冷启动。默认 3。" data-tip="新会话或压缩后，自动回顾最近几天的记忆；0 表示关闭冷启动。默认 3。">?</span></label><input type="number" id="inject.coldStartDays" name="inject.coldStartDays" min="0" max="90"></div>
+        <div class="field"><label for="inject.coldStartItems">冷启动条数<span class="help" tabindex="0" role="img" aria-label="说明：冷启动最多注入几条近期记忆。1–20，默认 5。" data-tip="冷启动最多注入几条近期记忆。1–20，默认 5。">?</span></label><input type="number" id="inject.coldStartItems" name="inject.coldStartItems" min="1" max="20"></div>
+        <div class="field"><label for="inject.cooldownTurns">注入冷却回合<span class="help" tabindex="0" role="img" aria-label="说明：两次自动注入之间至少间隔的回合数，避免连续刷屏；0 表示不冷却。默认 3。" data-tip="两次自动注入之间至少间隔的回合数，避免连续刷屏；0 表示不冷却。默认 3。">?</span></label><input type="number" id="inject.cooldownTurns" name="inject.cooldownTurns" min="0" max="100"></div>
+        <div class="field"><label for="compile.minRecords">概念提炼最少记录<span class="help" tabindex="0" role="img" aria-label="说明：同一主题积累多少条记录后才生成概念页；低于此值不提炼。1–50，默认 2。" data-tip="同一主题积累多少条记录后才生成概念页；低于此值不提炼。1–50，默认 2。">?</span></label><input type="number" id="compile.minRecords" name="compile.minRecords" min="1" max="50"></div>
+        <div class="field"><label for="compile.maxTopics">概念提炼主题上限<span class="help" tabindex="0" role="img" aria-label="说明：一次提炼最多处理多少个主题，防止长任务。1–500，默认 20。" data-tip="一次提炼最多处理多少个主题，防止长任务。1–500，默认 20。">?</span></label><input type="number" id="compile.maxTopics" name="compile.maxTopics" min="1" max="500"></div>
+        <div class="field"><label for="ui.host">监听地址<span class="help" tabindex="0" role="img" aria-label="说明：配置台只允许绑定回环地址，避免把记忆暴露到局域网。默认 127.0.0.1。" data-tip="配置台只允许绑定回环地址，避免把记忆暴露到局域网。默认 127.0.0.1。">?</span></label>
+          <select id="ui.host" name="ui.host">
+            <option value="127.0.0.1">127.0.0.1</option>
+            <option value="localhost">localhost</option>
+            <option value="::1">::1</option>
+          </select>
+        </div>
+        <div class="field"><label for="ui.port">监听端口<span class="help" tabindex="0" role="img" aria-label="说明：配置台端口，1024–65535，默认 8790。改动需重启配置台；端口被占用可用 --port 临时覆盖。" data-tip="配置台端口，1024–65535，默认 8790。改动需重启配置台；端口被占用可用 --port 临时覆盖。">?</span></label><input type="number" id="ui.port" name="ui.port" min="1024" max="65535"></div>
+      </div>
+
+      <div class="actions">
+        <button type="submit" id="save">保存配置</button>
+        <span id="save-result" role="status"></span>
+      </div>
+    </form>
+  </section>
+
+  <section>
+    <h2>记忆浏览（只读）</h2>
+    <form id="search-form" class="searchbar">
+      <div class="field"><label for="q">关键词</label><input type="text" id="q" name="q" placeholder="留空则按时间列出"></div>
+      <div class="field"><label for="from">事件起始日</label><input type="text" id="from" name="from" placeholder="YYYY-MM-DD"></div>
+      <div class="field"><label for="to">事件结束日</label><input type="text" id="to" name="to" placeholder="YYYY-MM-DD"></div>
+      <div class="field"><label for="mem-status">状态</label>
+        <select id="mem-status" name="mem-status">
+          <option value="active">仅有效</option>
+          <option value="history">含历史</option>
+          <option value="all">全部</option>
+          <option value="superseded">已取代</option>
+          <option value="disputed">有争议</option>
+        </select>
+      </div>
+      <div class="actions" style="margin:0">
+        <button type="submit" id="search">搜索</button>
+      </div>
+    </form>
+    <p id="search-meta" class="muted" style="margin:10px 0 0">尚未搜索。</p>
+    <ul id="results" class="results"></ul>
+    <button type="button" id="more" class="secondary" hidden>加载更多</button>
+  </section>
+</main>
+<script>
+(function () {
+  'use strict'
+  var form = document.getElementById('config-form')
+  var saveResult = document.getElementById('save-result')
+  var statusBox = document.getElementById('status')
+  var configErrors = document.getElementById('config-errors')
+  var paths = document.getElementById('paths')
+  var results = document.getElementById('results')
+  var searchMeta = document.getElementById('search-meta')
+  var more = document.getElementById('more')
+  var searchState = { cursor: null }
+
+  // 说明图标嵌在 label 内，点击时不要触发输入框聚焦或复选框切换。
+  Array.prototype.forEach.call(document.querySelectorAll('.help'), function (help) {
+    help.addEventListener('click', function (event) {
+      event.preventDefault()
+      event.stopPropagation()
+    })
+  })
+
+  function el(tag, cls, text) {
+    var node = document.createElement(tag)
+    if (cls) node.className = cls
+    if (text !== undefined) node.textContent = text
+    return node
+  }
+
+  async function api(url, options) {
+    var res = await fetch(url, options)
+    var body = null
+    try { body = await res.json() } catch (e) { body = null }
+    if (!res.ok) {
+      var msg = body && body.errors ? body.errors.join('；') : (body && body.message) || ('HTTP ' + res.status)
+      throw new Error(msg)
+    }
+    return body
+  }
+
+  function setPath(target, key, value) {
+    var parts = key.split('.')
+    var node = target
+    for (var i = 0; i < parts.length - 1; i++) {
+      if (!node[parts[i]] || typeof node[parts[i]] !== 'object') node[parts[i]] = {}
+      node = node[parts[i]]
+    }
+    node[parts[parts.length - 1]] = value
+  }
+
+  function flattenConfig(cfg) {
+    var out = {}
+    var keys = ['timeZone', 'retentionDays', 'namespace', 'entities']
+    keys.forEach(function (k) { out[k] = cfg[k] })
+    Object.keys(cfg.capture || {}).forEach(function (k) { out['capture.' + k] = cfg.capture[k] })
+    Object.keys(cfg.inject || {}).forEach(function (k) { out['inject.' + k] = cfg.inject[k] })
+    Object.keys(cfg.compile || {}).forEach(function (k) { out['compile.' + k] = cfg.compile[k] })
+    Object.keys(cfg.privacy || {}).forEach(function (k) { out['privacy.' + k] = cfg.privacy[k] })
+    Object.keys(cfg.growth || {}).forEach(function (k) { out['growth.' + k] = cfg.growth[k] })
+    Object.keys(cfg.ui || {}).forEach(function (k) { out['ui.' + k] = cfg.ui[k] })
+    return out
+  }
+
+  function fillForm(cfg) {
+    var flat = flattenConfig(cfg)
+    Object.keys(flat).forEach(function (key) {
+      var field = form.elements.namedItem(key)
+      if (!field) return
+      var value = flat[key]
+      if (field.type === 'checkbox') field.checked = value === true
+      else if (key === 'entities') field.value = Array.isArray(value) ? value.join(', ') : ''
+      else field.value = value === undefined || value === null ? '' : String(value)
+    })
+  }
+
+  function renderSources(fields) {
+    Array.prototype.forEach.call(form.querySelectorAll('.src, .src-note'), function (node) {
+      node.remove()
+    })
+    Object.keys(fields || {}).forEach(function (key) {
+      var control = form.elements.namedItem(key)
+      if (!control) return
+      var holder = control.closest('.field') || control.closest('label')
+      if (!holder) return
+      var source = fields[key].source
+      var label = source === 'patch' ? '宿主覆盖' : source === 'config.json' ? '文件' : '默认'
+      var note = source === 'patch'
+        ? '该值正被 profile 的 cordis.patch.yml 覆盖，在此修改不生效。'
+        : source === 'config.json' ? '来自数据目录下的 config.json。' : '使用插件默认值。'
+      var badge = el('span', 'src' + (source === 'patch' ? ' src-patch' : ''), label)
+      badge.title = note
+      holder.appendChild(badge)
+      if (source === 'patch') holder.appendChild(el('span', 'src-note', note))
+    })
+  }
+
+  function collectForm() {
+    var out = {}
+    Array.prototype.forEach.call(form.elements, function (field) {
+      if (!field.name) return
+      var key = field.name
+      if (field.type === 'checkbox') setPath(out, key, field.checked)
+      else if (field.type === 'number') setPath(out, key, field.value === '' ? null : Number(field.value))
+      else setPath(out, key, field.value.trim())
+    })
+    var entities = form.elements.entities.value.split(/[,，\s]+/).map(function (s) { return s.trim() }).filter(Boolean)
+    out.entities = entities
+    return out
+  }
+
+  function stat(label, value) {
+    var box = el('div', 'stat')
+    box.appendChild(el('b', null, String(value)))
+    box.appendChild(el('span', 'muted', label))
+    return box
+  }
+
+  async function loadHealth() {
+    try {
+      var h = await api('/api/health')
+      statusBox.textContent = ''
+      statusBox.appendChild(stat('条记录', h.records))
+      statusBox.appendChild(stat('有效', h.active))
+      statusBox.appendChild(stat('已取代', h.superseded))
+      statusBox.appendChild(stat('有争议', h.disputed))
+      statusBox.appendChild(stat('坏行', h.malformed))
+      statusBox.appendChild(stat('概念页', h.concepts))
+      statusBox.appendChild(stat('日记', h.layers && h.layers.L2 ? h.layers.L2.entries : 0))
+      statusBox.appendChild(stat('L0', h.layers && h.layers.L0 ? h.layers.L0.status : '未知'))
+      statusBox.appendChild(stat('分片文件', h.files))
+      statusBox.appendChild(stat('可写', h.writable ? '是' : '否'))
+      var errs = (h.configErrors || []).concat(h.configWarnings || []).length
+      configErrors.textContent = errs ? errs + ' 条配置提示（见下方保存结果或 config.json）' : ''
+      paths.textContent = '数据目录（来源 ' + h.configRootSource + '）：' + h.root +
+        '\n配置文件：' + h.configFile +
+        '\n时区：' + h.timeZone + '\n宿主覆盖项：' + (h.hostOverrides.length ? h.hostOverrides.join(', ') : '无')
+      if (h.configErrors && h.configErrors.length) {
+        saveResult.className = 'error'
+        saveResult.textContent = h.configErrors.join('；')
+      }
+    } catch (err) {
+      statusBox.textContent = '状态读取失败：' + err.message
+    }
+  }
+
+  async function loadConfig() {
+    var data = await api('/api/config')
+    fillForm(data.effective)
+    renderSources(data.fields)
+    if (data.fileWarning) {
+      saveResult.className = 'warn'
+      saveResult.textContent = data.fileWarning
+    }
+  }
+
+  form.addEventListener('submit', async function (event) {
+    event.preventDefault()
+    var button = document.getElementById('save')
+    button.disabled = true
+    saveResult.className = 'muted'
+    saveResult.textContent = '保存中…'
+    try {
+      var body = collectForm()
+      var result = await api('/api/config', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      saveResult.className = 'ok'
+      saveResult.textContent = '已保存到 ' + result.configFile + '。' + (result.restartRequired ? '部分设置需重启 DSH 后生效。' : '')
+      if (result.warnings && result.warnings.length) {
+        saveResult.className = 'warn'
+        saveResult.textContent += ' 提示：' + result.warnings.join('；')
+      }
+      fillForm(result.effective)
+      renderSources(result.fields)
+      await loadHealth()
+    } catch (err) {
+      saveResult.className = 'error'
+      saveResult.textContent = '保存失败：' + err.message
+    } finally {
+      button.disabled = false
+    }
+  })
+
+  function renderItems(items) {
+    items.forEach(function (item) {
+      var li = el('li', 'card')
+      var head = el('div', 'row')
+      head.appendChild(el('span', 'tag', item.kind + ' · ' + item.status))
+      if (item.sensitivity === 'private') head.appendChild(el('span', 'tag private', '私密'))
+      head.appendChild(el('span', 'meta', item.time_label))
+      head.appendChild(el('span', 'meta', item.id))
+      li.appendChild(head)
+      li.appendChild(el('p', 'text', item.text))
+      var meta = el('div', 'meta', '记录于 ' + new Date(item.recorded_at).toLocaleString())
+      if (item.source && item.source.session) {
+        meta.textContent += ' · 来源 ' + item.source.session + ' seq ' + item.source.seq_from + '–' + item.source.seq_to
+      }
+      if (item.time_precision) meta.textContent += ' · 精度 ' + item.time_precision + '/' + (item.time_basis || '')
+      li.appendChild(meta)
+      results.appendChild(li)
+    })
+  }
+
+  async function runSearch(append) {
+    var params = new URLSearchParams()
+    var q = document.getElementById('q').value.trim()
+    var from = document.getElementById('from').value.trim()
+    var to = document.getElementById('to').value.trim()
+    if (q) params.set('query', q)
+    if (from) params.set('date_from', from)
+    if (to) params.set('date_to', to)
+    params.set('status', document.getElementById('mem-status').value)
+    params.set('limit', '20')
+    if (append && searchState.cursor) params.set('cursor', searchState.cursor)
+    var button = document.getElementById('search')
+    button.disabled = true
+    searchMeta.className = 'muted'
+    searchMeta.textContent = '查询中…'
+    try {
+      var data = await api('/api/memories?' + params.toString())
+      if (!append) results.textContent = ''
+      renderItems(data.items)
+      searchState.cursor = data.next_cursor
+      more.hidden = !data.next_cursor
+      searchMeta.className = 'muted'
+      searchMeta.textContent = '状态 ' + data.status + ' · 共 ' + data.total + ' 条，当前显示 ' +
+        (results.children.length) + ' 条。' + (data.coverage || '') + (data.message ? ' ' + data.message : '')
+    } catch (err) {
+      searchState.cursor = null
+      more.hidden = true
+      searchMeta.className = 'error'
+      searchMeta.textContent = '查询失败：' + err.message
+    } finally {
+      button.disabled = false
+    }
+  }
+
+  document.getElementById('search-form').addEventListener('submit', function (event) {
+    event.preventDefault()
+    searchState.cursor = null
+    runSearch(false)
+  })
+  more.addEventListener('click', function () { runSearch(true) })
+
+  loadConfig().catch(function (err) {
+    saveResult.className = 'error'
+    saveResult.textContent = '配置读取失败：' + err.message
+  })
+  loadHealth()
+})()
+</script>
+</body>
+</html>
