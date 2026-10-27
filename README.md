@@ -1,6 +1,10 @@
+**English** · [简体中文](#zh-cn)
+
+<a id="english"></a>
+
 # dsh-temporal-memory
 
-**A temporal memory layer for [DSH](https://www.npmjs.com/package/@deepseek-ai/dsh). It remembers when things happened — and it can grow with you.**
+**Give your DSH a complete memory with a sense of time — it remembers when things happened, and turns scattered experience into concepts the way a person would.**
 
 [![CI](https://github.com/YaoQC-Ai/dsh-temporal-memory/actions/workflows/test.yml/badge.svg)](https://github.com/YaoQC-Ai/dsh-temporal-memory/actions/workflows/test.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
@@ -12,7 +16,7 @@ after a correction it is not even the same as **what is true**. `dsh-temporal-me
 five-layer memory built around event time, validity, provenance, and an explicit "unknown" state.
 It runs entirely on your own machine: no network, no runtime dependencies, no model calls on the hot path.
 
-[Quick start](#quick-start) · [How it works](#how-it-works) · [Configuration](#configuration) · [Tools](#tools) · [Documentation](#documentation) · [中文文档](#中文文档)
+[Quick start](#quick-start) · [How it works](#how-it-works) · [Configuration](#configuration) · [Tools](#tools) · [Documentation](#documentation) · [中文文档](#zh-cn)
 
 ---
 
@@ -356,13 +360,17 @@ MIT © 2026 yaoqc-ai. See [LICENSE](LICENSE).
 
 ---
 
+<a id="zh-cn"></a>
+
 # 中文文档
 
-**为 [DSH](https://www.npmjs.com/package/@deepseek-ai/dsh) 提供的时序分层记忆。它记得事情发生在什么时候，也能陪着你成长。**
+**简体中文** · [English](#english)
+
+**给你的 DSH 一个完整的、有时间概念的记忆——它记得事情发生在什么时候，也会像人一样把零散经历抽象成概念。**
 
 聊天记录记的是**消息写下来的时刻**，而不是**事情发生的时刻**；一次更正之后，它甚至不再等于**现在什么才是真的**。本插件为 DSH 提供五层记忆，把事件时间、有效期、来源和「未知」都变成显式字段。全部数据留在本机：不联网、零运行时依赖、热路径不调用模型。
 
-[快速开始](#快速开始) · [工作方式](#工作方式) · [配置](#配置) · [工具](#工具) · [文档](#文档) · [English](#dsh-temporal-memory)
+[快速开始](#快速开始) · [工作方式](#工作方式) · [配置](#配置) · [工具](#工具) · [文档](#文档) · [English](#english)
 
 ## 为什么需要它
 
