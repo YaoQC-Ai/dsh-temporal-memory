@@ -87,7 +87,7 @@ test('证据不足时保持原状，只在状态里留 pending', (t) => {
   })
   assert.equal(result.status, 'insufficient_evidence')
   assert.equal(readPersonality(root).available, false)
-  const status = growthStatus(root, { enabled: true, tz: TZ })
+  const status = growthStatus(root, { enabled: true, nowMs: zonedTimeToUtc(2026, 10, 26, 9, 0, 0, TZ), tz: TZ })
   assert.equal(status.pending_month, '2026-09')
   assert.equal(status.last_run.status, 'insufficient_evidence')
 })

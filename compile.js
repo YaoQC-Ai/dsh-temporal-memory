@@ -95,24 +95,56 @@ function stateOf(record) {
  * open conflicts. This block is replaced wholesale on every compile; anything
  * outside it belongs to the human.
  */
-function autoBlock(sorted, timeZone) {
+/** Max evidence length inside the auto block. An L1 record occasionally stores a
+ *  whole page body; embedding it verbatim makes the candidate block a full copy
+ *  (measured: 《我的改写史》 grew ×4.30). */
+const EVIDENCE_CLIP = 400
+
+/** Cap for the whole candidate block. A human page only needs to know a
+ *  candidate exists — it does not need a second copy of its own body. */
+const CANDIDATE_CLIP = 6000
+
+/** Compress one record into a single evidence line.
+ *
+ *  Uses line overlap rather than a prefix probe: sometimes the L1 record IS the
+ *  page body but starts with an intro line the page does not have. Counting
+ *  lines is safer — if half of the record's substantive lines already appear in
+ *  the human prose, keep a pointer instead of a copy.
+ */
+function evidenceText(record, pageText) {
+  const raw = String(record.text || '').trim()
+  const full = raw.replace(/\s+/g, ' ')
+  const pointer = `〔本页正文已含此段，原文见来源记录 ${record.id || '—'}〕`
+  if (pageText && raw.length >= 8 && pageText.includes(raw)) return pointer
+  if (pageText && raw.length > EVIDENCE_CLIP) {
+    const lines = raw.split('\n').map((l) => l.trim()).filter((l) => l.length >= 8)
+    if (lines.length >= 4) {
+      const hit = lines.filter((l) => pageText.includes(l)).length
+      if (hit / lines.length >= 0.5) return pointer
+    }
+  }
+  if (full.length <= EVIDENCE_CLIP) return full
+  return `${full.slice(0, EVIDENCE_CLIP)}…〔已截断，全文见来源记录 ${record.id || '—'}〕`
+}
+
+function autoBlock(sorted, timeZone, pageText = '') {
   const lines = [AUTO_BEGIN, '## 当前结论', '']
   const active = sorted.filter((r) => r.status === 'active' && !r.superseded_by)
   const current = (active.length ? active : sorted).slice(-3)
   for (const record of current) {
-    lines.push(`- ${dateKey(record.event_start_ms, timeZone)}：${record.text}（来源 ${sourceOf(record)}；${stateOf(record)}）`)
+    lines.push(`- ${dateKey(record.event_start_ms, timeZone)}：${evidenceText(record, pageText)}（来源 ${sourceOf(record)}；${stateOf(record)}）`)
   }
   lines.push('', '## 演变', '')
   for (const record of sorted) {
     const state = stateOf(record)
     const note = state === '有效' ? '' : `（${state}）`
-    lines.push(`- ${dateKey(record.event_start_ms, timeZone)}：${record.text}${note}（来源 ${sourceOf(record)}）`)
+    lines.push(`- ${dateKey(record.event_start_ms, timeZone)}：${evidenceText(record, pageText)}${note}（来源 ${sourceOf(record)}）`)
   }
   const conflicts = sorted.filter((r) => r.status === 'disputed' || r.superseded_by)
   lines.push('', '## 冲突与待确认', '')
   if (conflicts.length) {
     for (const record of conflicts) {
-      lines.push(`- ${dateKey(record.event_start_ms, timeZone)}：${record.text}（${stateOf(record)}）`)
+      lines.push(`- ${dateKey(record.event_start_ms, timeZone)}：${evidenceText(record, pageText)}（${stateOf(record)}）`)
     }
   } else {
     lines.push('- （无）')
@@ -121,16 +153,16 @@ function autoBlock(sorted, timeZone) {
   return lines.join('\n')
 }
 
-function frontmatter({ title, slug, sources, sourceIds, links, created, today, eventTime, status, namespace }) {
+function frontmatter({ title, slug, aliases, sources, sourceIds, links, created, today, eventTime, status, namespace }) {
   return [
     '---',
     `标题: ${yamlStr(title)}`,
     '别名:',
-    `  - ${yamlStr(title)}`,
+    ...[...new Set([title, ...(aliases || [])])].map((alias) => `  - ${yamlStr(alias)}`),
     '来源:',
     ...(sources.length ? sources.map((s) => `  - ${yamlStr(s)}`) : ['  - -']),
     '关联:',
-    ...(links.length ? links.map((l) => `  - ${yamlStr(l)}`) : ['  - -']),
+    ...(links.length ? links.map((l) => `  - ${yamlStr(l)}`) : []),
     `创建日期: ${created}`,
     `更新日期: ${today}`,
     '记忆类型: compiled',
@@ -171,25 +203,35 @@ function appendChangeLog(text, note) {
  *      and mark the page `needs-review` (or keep `needs-update` if a deletion
  *      or correction already flagged it).
  */
-function writeCompiled(root, { slug, title, sorted, timeZone, today, namespace = DEFAULT_NAMESPACE }) {
+function writeCompiled(root, { slug, title, aliases = [], sorted, timeZone, today, namespace = DEFAULT_NAMESPACE }) {
   const file = conceptPath(root, slug, namespace)
   const sources = [...new Set(sorted.map(sourceOf))]
-  const sourceIds = sorted.map((r) => r.id).filter(Boolean)
+  const sourceIds = [...new Set(sorted.map((r) => r.id).filter(Boolean))]
   const links = [...new Set(sorted.flatMap((r) => r.entities || []))].filter((x) => x !== title).slice(0, 5)
     .map((l) => `[[${l}]]`)
   const hasConflict = sorted.some((r) => r.status === 'disputed')
-  const hasSupersede = sorted.some((r) => r.superseded_by)
-  const status = hasConflict || hasSupersede ? 'needs-update' : 'active'
+  const status = hasConflict ? 'needs-update' : 'active'
   const eventTime = sorted.length
     ? `${dateKey(sorted[0].event_start_ms, timeZone)} ~ ${dateKey(sorted.at(-1).event_start_ms, timeZone)}`
     : ''
-  const block = autoBlock(sorted, timeZone)
   let text = ''
   try {
     text = fs.readFileSync(file, 'utf8')
   } catch {
     // ENOENT: no existing page, so the create branch below applies.
   }
+  // Probe only against human prose: strip the auto and candidate blocks first,
+  // otherwise text written by the previous run flips the decision and the
+  // compiler oscillates between two forms instead of converging.
+  const humanText = (() => {
+    let out = text
+    for (const [b, e] of [[CANDIDATE_BEGIN, CANDIDATE_END], [AUTO_BEGIN, AUTO_END]]) {
+      const r = replaceBetween(out, b, e, '')
+      if (r !== null) out = r
+    }
+    return out
+  })()
+  const block = autoBlock(sorted, timeZone, humanText)
 
   if (!text) {
     const body = [
@@ -208,11 +250,11 @@ function writeCompiled(root, { slug, title, sorted, timeZone, today, namespace =
       '',
       '## 关联',
       '',
-      ...(links.length ? links.map((l) => `- ${l}`) : ['- -']),
+      ...(links.length ? links.map((l) => `- ${l}`) : []),
       '',
     ].join('\n')
     writeTextAtomic(file, frontmatter({
-      title, slug, sources, sourceIds, links, created: today, today, eventTime, status,
+      title, slug, aliases, sources, sourceIds, links, created: today, today, eventTime, status, namespace,
     }) + '\n' + body)
     updateConceptIndex(root, { slug, title, domain: 'knowledge', status, today }, namespace)
     return { created: true, updated: true, status, needsReview: false }
@@ -228,7 +270,10 @@ function writeCompiled(root, { slug, title, sorted, timeZone, today, namespace =
     next = next.replace(/^更新日期: .+$/m, `更新日期: ${today}`)
     next = next.replace(/^状态: .+$/m, `状态: ${status}`)
     next = next.replace(/^事件时间: .+$/m, `事件时间: ${yamlStr(eventTime)}`)
-    next = next.replace(/^来源记录:\n(?: {2}- .*\n)*/m, `来源记录:\n${sourceIds.map((id) => `  - ${yamlStr(id)}`).join('\n')}\n`)
+    const sourceIdLines = sourceIds.map((id) => `  - ${yamlStr(id)}`)
+    next = next.replace(new RegExp('^来源记录:\\n(?: {2}- .*\\n)*', 'm'), ['来源记录:', ...sourceIdLines, ''].join('\n'))
+    const aliasLines = [...new Set([title, ...aliases])].map((alias) => `  - ${yamlStr(alias)}`)
+    next = next.replace(new RegExp('^别名:\\n(?: {2}- .*\\n)*', 'm'), ['别名:', ...aliasLines, ''].join('\n'))
     if (block !== oldAuto) next = appendChangeLog(next, `自动编译更新：${sorted.length} 条证据，状态 ${status}`)
     if (next === text) return { created: false, updated: false, status, needsReview: false }
     writeTextAtomic(file, next)
@@ -237,27 +282,32 @@ function writeCompiled(root, { slug, title, sorted, timeZone, today, namespace =
   }
 
   // Human-owned page: proposal only, never a rewrite.
+  const rawCandidate = block.replace(AUTO_BEGIN, '').replace(AUTO_END, '').trim()
+  const candidateBody = rawCandidate.length > CANDIDATE_CLIP
+    ? `${rawCandidate.slice(0, CANDIDATE_CLIP)}\n\n〔候选块超长，已截断；完整证据见来源记录。〕`
+    : rawCandidate
   const candidate = [
     CANDIDATE_BEGIN,
     '## 自动编译候选（待人工确认）',
     '',
-    block.replace(AUTO_BEGIN, '').replace(AUTO_END, '').trim(),
+    candidateBody,
     '',
     CANDIDATE_END,
   ].join('\n')
   const existingCandidate = replaceBetween(text, CANDIDATE_BEGIN, CANDIDATE_END, candidate)
+  const candidateChanged = existingCandidate === null || existingCandidate !== text
   let next = existingCandidate !== null
     ? existingCandidate
     : text.replace(/\s*$/, '\n') + '\n' + candidate + '\n'
-  // A correction or deletion already marked the page needs-update; recompiling
-  // may add a candidate but must not downgrade that flag to plain review.
-  const nextStatus = oldStatus === 'needs-update' ? 'needs-update' : 'needs-review'
+  // Review is resolved explicitly by setting the page active. An unchanged
+  // candidate must not mark it again; new evidence reopens the review.
+  const nextStatus = oldStatus === 'needs-update' ? 'needs-update' : candidateChanged ? 'needs-review' : oldStatus
   next = next.replace(/^更新日期: .+$/m, `更新日期: ${today}`)
   next = next.replace(/^状态: .+$/m, `状态: ${nextStatus}`)
-  if (next === text) return { created: false, updated: false, status: nextStatus, needsReview: true }
+  if (next === text) return { created: false, updated: false, status: nextStatus, needsReview: nextStatus === 'needs-review' }
   writeTextAtomic(file, next)
   updateConceptIndex(root, { slug, title, domain: 'knowledge', status: nextStatus, today }, namespace)
-  return { created: false, updated: true, status: nextStatus, needsReview: true, oldStatus }
+  return { created: false, updated: true, status: nextStatus, needsReview: nextStatus === 'needs-review', oldStatus }
 }
 
 /**
@@ -267,7 +317,7 @@ function writeCompiled(root, { slug, title, sorted, timeZone, today, namespace =
  * record can feed several pages. Only records with a session source are used:
  * a conclusion must be traceable back to what was actually said.
  *
- * @returns {{pages: object[], updated: object[], skipped: object[], needsReview: object[], scanned: number, topics: number}}
+ * @returns {{pages: object[], updated: object[], skipped: object[], needsReview: object[], scanned: number, topics: number, truncated: number}}
  */
 export function compileAll(store, root, options = {}) {
   const { timeZone = 'Asia/Shanghai', minRecords = 2, maxTopics = 20, topic } = options
@@ -281,45 +331,58 @@ export function compileAll(store, root, options = {}) {
   const groups = new Map()
   for (const record of records) {
     if (!Number.isFinite(record.event_start_ms)) continue
-    const keys = [...(record.topics || []), ...(record.entities || [])]
+    const keys = [...new Set([...(record.topics || []), ...(record.entities || [])])]
     for (const key of keys) {
-      if (!key) continue
-      if (topic && !key.includes(topic)) continue
-      if (!groups.has(key)) groups.set(key, [])
-      groups.get(key).push(record)
+      if (!key || (topic && !key.includes(topic))) continue
+      // Short ASCII names extracted only as topics are usually tokenizer
+      // fragments. A quoted/configured entity remains eligible (Redis, RAG…).
+      if (/^[\x20-\x7e]{1,12}$/.test(key) && !(record.entities || []).includes(key)) continue
+      // Case-only variants share one portable filename and therefore one
+      // concept. Merge their evidence instead of overwriting or dropping one.
+      const groupKey = key.toLowerCase()
+      if (!groups.has(groupKey)) groups.set(groupKey, { title: key, aliases: new Set(), records: [], ids: new Set() })
+      const group = groups.get(groupKey)
+      group.aliases.add(key)
+      if (group.ids.has(record.id)) continue
+      group.ids.add(record.id)
+      group.records.push(record)
     }
   }
 
+  const eligible = []
+  for (const group of groups.values()) {
+    if (group.records.length < minRecords) continue
+    try {
+      group.slug = slugify(group.title)
+      eligible.push(group)
+    } catch {
+      // Invalid titles stay in L1, matching the previous behavior.
+    }
+  }
+  eligible.sort((a, b) => b.records.length - a.records.length || a.slug.localeCompare(b.slug))
+  const selected = eligible.slice(0, Math.max(0, maxTopics))
   const pages = []
   const updated = []
   const skipped = []
   const needsReview = []
-  let processed = 0
-  for (const [key, list] of groups) {
-    if (processed >= maxTopics) break
-    if (list.length < minRecords) continue
-    let slug
-    try {
-      slug = slugify(key)
-    } catch {
-      continue
-    }
-    const sorted = [...list].sort((a, b) => a.event_start_ms - b.event_start_ms || String(a.id).localeCompare(String(b.id)))
+  for (const group of selected) {
+    const { slug, title } = group
+    const sorted = [...group.records].sort((a, b) => a.event_start_ms - b.event_start_ms || String(a.id).localeCompare(String(b.id)))
     const result = writeCompiled(root, {
       slug,
-      title: key,
+      title,
+      aliases: [...group.aliases],
       sorted,
       timeZone,
       today: dateKey(Date.now(), timeZone),
       namespace,
     })
-    if (result.needsReview) needsReview.push({ topic: key, slug, path: conceptPath(root, slug, namespace) })
-    if (result.created) pages.push({ topic: key, slug, path: conceptPath(root, slug, namespace) })
-    else if (result.updated) updated.push({ topic: key, slug, path: conceptPath(root, slug, namespace), status: result.status })
-    else skipped.push({ topic: key, slug, reason: 'unchanged' })
-    processed++
+    if (result.needsReview) needsReview.push({ topic: title, slug, path: conceptPath(root, slug, namespace) })
+    if (result.created) pages.push({ topic: title, slug, path: conceptPath(root, slug, namespace) })
+    else if (result.updated) updated.push({ topic: title, slug, path: conceptPath(root, slug, namespace), status: result.status })
+    else skipped.push({ topic: title, slug, reason: 'unchanged' })
   }
-  return { pages, updated, skipped, needsReview, scanned: records.length, topics: groups.size }
+  return { pages, updated, skipped, needsReview, scanned: records.length, topics: groups.size, truncated: eligible.length - selected.length }
 }
 
 export { readConcept }

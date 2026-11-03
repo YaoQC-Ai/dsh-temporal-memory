@@ -109,6 +109,11 @@ test('topic 过滤与 maxTopics 上限', (t) => {
   ])
   const capped = compileAll(cappedStore, cappedRoot, { timeZone: TZ, maxTopics: 1 })
   assert.equal(capped.pages.length, 1)
+  assert.equal(capped.truncated, 1)
+  const disabled = compileAll(cappedStore, cappedRoot, { timeZone: TZ, maxTopics: 0 })
+  assert.equal(disabled.pages.length, 0)
+  assert.equal(disabled.updated.length, 0)
+  assert.equal(disabled.truncated, 2)
 })
 
 test('冲突主题生成 needs-update 页', (t) => {
@@ -170,5 +175,105 @@ test('新页面的索引写入所属 namespace', (t) => {
   assert.equal(res.pages.length, 1)
   const nsIndex = path.join(conceptDir(root, 'A'), '_index.md')
   assert.match(fs.readFileSync(nsIndex, 'utf8'), /示例网关/)
+  assert.match(readConcept(root, '示例网关', 'A'), /命名空间: A/)
+  assert.equal(listConcepts(root, { namespace: 'A' }).length, 1)
   assert.equal(fs.existsSync(path.join(conceptDir(root), '_index.md')), false)
+})
+
+test('重复 topic/entity 不让单条记录凑够门槛，来源 id 也不重复', (t) => {
+  const root = tmpRoot(t)
+  const store = seed(root, [rec({ id: 'm_dup', topics: ['主人'], entities: ['主人'] })])
+  assert.equal(compileAll(store, root, { timeZone: TZ, minRecords: 2 }).pages.length, 0)
+  store.append([rec({ id: 'm_dup_2', topics: ['主人'], entities: ['主人'], event_start_ms: AT(21) })])
+  assert.equal(compileAll(store, root, { timeZone: TZ, minRecords: 2 }).pages.length, 1)
+  const md = readConcept(root, '主人')
+  assert.equal(md.match(/^  - m_dup$/gm).length, 1)
+  assert.doesNotMatch(md, /命名空间: undefined/)
+})
+
+test('短 ASCII 词只有作为明确 entity 时才自动成页', (t) => {
+  const noiseRoot = tmpRoot(t)
+  const noise = seed(noiseRoot, [
+    rec({ id: 'm_llm_1', topics: ['LLM'] }),
+    rec({ id: 'm_llm_2', topics: ['LLM'], event_start_ms: AT(21) }),
+  ])
+  assert.equal(compileAll(noise, noiseRoot, { timeZone: TZ }).pages.length, 0)
+  const redisRoot = tmpRoot(t)
+  const redis = seed(redisRoot, [
+    rec({ id: 'm_redis_1', topics: ['Redis'], entities: ['Redis'] }),
+    rec({ id: 'm_redis_2', topics: ['Redis'], entities: ['Redis'], event_start_ms: AT(21) }),
+  ])
+  assert.equal(compileAll(redis, redisRoot, { timeZone: TZ }).pages.length, 1)
+  assert.ok(readConcept(redisRoot, 'Redis'))
+})
+
+test('大小写变体合并为一个概念，证据和别名都保留', (t) => {
+  const root = tmpRoot(t)
+  const store = seed(root, [
+    rec({ id: 'm_agent_1', topics: ['Agent'], entities: ['Agent'], event_start_ms: AT(18) }),
+    rec({ id: 'm_agent_2', topics: ['Agent'], entities: ['Agent'], event_start_ms: AT(19) }),
+    rec({ id: 'm_agent_3', topics: ['AGENT'], entities: ['AGENT'], event_start_ms: AT(20) }),
+    rec({ id: 'm_agent_4', topics: ['AGENT'], entities: ['AGENT'], event_start_ms: AT(21) }),
+  ])
+  const res = compileAll(store, root, { timeZone: TZ })
+  assert.equal(res.pages.length, 1)
+  assert.equal(res.topics, 1)
+  const md = readConcept(root, 'Agent')
+  assert.match(md, /别名:\n  - Agent\n  - AGENT/)
+  for (const id of ['m_agent_1', 'm_agent_2', 'm_agent_3', 'm_agent_4']) assert.match(md, new RegExp(id))
+  assert.equal(fs.readdirSync(conceptDir(root)).filter((name) => name.toLowerCase() === 'agent.md').length, 1)
+})
+
+test('长文证据被压成单行摘要，连续编译幂等', (t) => {
+  const root = tmpRoot(t)
+  const longText = Array.from({ length: 60 }, (_, i) => `## 重复标题 ${i}\n这是第 ${i} 段用于验证长文截断的人工结论内容。`).join('\n')
+  const store = seed(root, [
+    rec({ id: 'm_long_1', text: longText, event_start_ms: AT(18) }),
+    rec({ id: 'm_long_2', text: longText, event_start_ms: AT(20) }),
+  ])
+  compileAll(store, root, { timeZone: TZ })
+  const file = path.join(conceptDir(root), '示例网关.md')
+  const first = fs.readFileSync(file, 'utf8')
+  assert.ok(first.length < longText.length * 2)
+  assert.doesNotMatch(first, /^## 重复标题/m)
+  assert.match(first, /已截断，全文见来源记录/)
+  const second = compileAll(store, root, { timeZone: TZ })
+  const third = compileAll(store, root, { timeZone: TZ })
+  assert.equal(second.updated.length, 0)
+  assert.equal(third.updated.length, 0)
+  assert.equal(fs.readFileSync(file, 'utf8'), first)
+})
+
+test('人工确认后状态保持 active，新证据才重新要求审核', (t) => {
+  const root = tmpRoot(t)
+  const store = seed(root, [
+    rec({ id: 'm_review_1', event_start_ms: AT(18) }),
+    rec({ id: 'm_review_2', event_start_ms: AT(20) }),
+  ])
+  saveConcept(root, { title: '示例网关', content: '人工维护内容' })
+  compileAll(store, root, { timeZone: TZ })
+  const file = path.join(conceptDir(root), '示例网关.md')
+  assert.match(fs.readFileSync(file, 'utf8'), /状态: needs-review/)
+  fs.writeFileSync(file, fs.readFileSync(file, 'utf8').replace('状态: needs-review', '状态: active'))
+  compileAll(store, root, { timeZone: TZ })
+  assert.match(fs.readFileSync(file, 'utf8'), /状态: active/)
+  store.append([rec({ id: 'm_review_3', text: '新的部署结论', event_start_ms: AT(21) })])
+  compileAll(store, root, { timeZone: TZ })
+  assert.match(fs.readFileSync(file, 'utf8'), /状态: needs-review/)
+  fs.writeFileSync(file, fs.readFileSync(file, 'utf8').replace('状态: needs-review', '状态: needs-update'))
+  compileAll(store, root, { timeZone: TZ })
+  assert.match(fs.readFileSync(file, 'utf8'), /状态: needs-update/)
+  fs.writeFileSync(file, fs.readFileSync(file, 'utf8').replace('状态: needs-update', '状态: active'))
+  compileAll(store, root, { timeZone: TZ })
+  assert.match(fs.readFileSync(file, 'utf8'), /状态: active/)
+})
+
+test('已闭合的取代链是历史，不让自动页永久 needs-update', (t) => {
+  const root = tmpRoot(t)
+  const store = seed(root, [
+    rec({ id: 'm_old', status: 'superseded', superseded_by: 'm_new', event_start_ms: AT(18) }),
+    rec({ id: 'm_new', kind: 'correction', text: '示例网关改用 8081', event_start_ms: AT(20) }),
+  ])
+  compileAll(store, root, { timeZone: TZ })
+  assert.match(readConcept(root, '示例网关'), /状态: active/)
 })

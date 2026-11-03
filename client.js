@@ -66,7 +66,7 @@ window.__ModuleLoader__.load({
       { key: 'inject.coldStartItems', label: '新对话开头最多带几条', type: 'number', min: 1, max: 20, tip: '上面那件事最多带进来几条记忆。1–20，默认 5。' },
       { key: 'inject.cooldownTurns', label: '两次提醒之间隔几轮', type: 'number', min: 0, max: 100, tip: '刚提醒过一次后，至少隔几轮才再提醒，免得刷屏。填 0 表示不限制。0–100，默认 3。' },
       { key: 'compile.minRecords', label: '同一件事记够几条才整理', type: 'number', min: 1, max: 50, tip: '同一个话题攒够几条记录后，才自动整理成一页笔记。调大能减少零碎笔记。1–50，默认 2。' },
-      { key: 'compile.maxTopics', label: '一次最多整理几个话题', type: 'number', min: 1, max: 500, tip: '一次自动整理最多处理几个话题，防止跑太久卡住。1–500，默认 20。' },
+      { key: 'compile.maxTopics', label: '一次最多整理几个话题', type: 'number', min: 0, max: 500, tip: '一次自动整理最多处理几个话题，防止跑太久卡住。填 0 表示关闭自动整理。0–500，默认 20。' },
       { key: 'privacy.enhanced', label: '更严格的隐私保护', type: 'bool', tip: '凭据（密钥、密码、令牌、私钥、连接串）在写入前就被替换成「[已脱敏]」，存下来的只有占位符，与开关无关。开关管的是普通内容要不要处理得更严，可能连有用信息一起遮掉。默认关闭。' },
       { key: 'growth.enabled', label: '每月更新 Agent 软画像', type: 'bool', tip: '开启后每月首次启动时，用上月日记与概念页归纳一次表达风格、主动性与提醒方式，写进 profile/agent/personality.md 并每会话注入一次。只调软画像，不改角色设定、安全策略与权限。证据不足保持原状，人工改过该文件后不再覆盖。默认关闭。', risk: '注意：开启后每月会多一份画像文件与一次归纳（只看计数与主题，不读原文）；想完全接管就手改 personality.md，插件会停下。' },
     ]

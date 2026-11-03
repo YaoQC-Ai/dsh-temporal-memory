@@ -343,7 +343,7 @@ test('同轮凭据不连坐普通偏好', () => {
   assert.doesNotMatch(pref.text, /sk-abcdef/)
 })
 
-test('supersede 触发 needs-update 且冲突块非空', async (t) => {
+test('supersede 已闭合时自动页回 active，历史块仍保留', async (t) => {
   const root = dataRoot(tmpRoot(t))
   const store = new Store(root)
   store.append([
@@ -353,7 +353,7 @@ test('supersede 触发 needs-update 且冲突块非空', async (t) => {
   const res = compileAll(store, root, { timeZone: TZ })
   assert.equal(res.pages.length, 1)
   const md = readConcept(root, '示例网关')
-  assert.match(md, /状态: needs-update/)
+  assert.match(md, /状态: active/)
   assert.match(md, /## 冲突与待确认\n\n- .*8080/)
   assert.doesNotMatch(md, /## 冲突与待确认\n\n- （无）/)
 })

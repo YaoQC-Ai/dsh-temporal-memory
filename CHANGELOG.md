@@ -4,6 +4,22 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.3] - 2026-11-03
+
+### Fixed
+
+- Concept compilation counts each record once per concept, deduplicates source IDs, and merges case-only
+  topic variants into one page with all evidence and aliases preserved.
+- Short ASCII tokenizer fragments no longer create pages unless they are explicit entities. Newly created
+  namespaced pages retain their namespace and appear in the correct index.
+- Evidence is single-line and bounded, with source pointers for long or already-present text. Repeated
+  compiles are idempotent, index rows have stable ordering, and topic truncation is deterministic.
+- Human review can now close: an unchanged candidate keeps a manually confirmed page `active`, while new
+  evidence reopens `needs-review`. Explicit `needs-update` remains sticky, and a closed supersession chain
+  no longer leaves an automatic page permanently `needs-update`.
+- `compile.maxTopics=0` disables automatic compilation. The compiler reports the number of eligible topics
+  omitted by the limit as `truncated`.
+
 ## [1.4.2] - 2026-10-27
 
 ### Fixed

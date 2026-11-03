@@ -54,6 +54,12 @@ test('非法类型、范围、时区与相对路径都报错并回退默认值',
   assert.equal(errors.length, 10)
 })
 
+test('compile.maxTopics=0 合法关闭自动编译', () => {
+  const { config, errors } = validateConfig({ compile: { maxTopics: 0 } })
+  assert.deepEqual(errors, [])
+  assert.equal(config.compile.maxTopics, 0)
+})
+
 test('旧的 journal 配置块被忽略，不报未知配置项', () => {
   const { config, errors, warnings } = validateConfig({ journal: { enabled: false, autoCatchUp: false, catchUpDays: 5, overview: true } })
   assert.deepEqual(errors, [])

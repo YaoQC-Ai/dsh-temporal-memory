@@ -224,7 +224,7 @@ Effective values merge three sources; later wins:
 | `privacy.enhanced` | `false` | Marks common personal data as private locally. Credentials are redacted regardless |
 | `growth.enabled` | `false` | Monthly L4 revision from the previous month's evidence |
 | `compile.minRecords` | `2` | Records per topic before `memory_compile` creates a page |
-| `compile.maxTopics` | `20` | Topics per compile run |
+| `compile.maxTopics` | `20` | Topics per compile run; `0` disables automatic compilation |
 | `ui.host` / `ui.port` | `127.0.0.1` / `18790` | Compatibility field; the host opens no listener. Standalone console reads it. Loopback only |
 
 Saving in Settings writes the whole `config.json`, so a saved value keeps winning over a changed
@@ -254,6 +254,10 @@ node scripts/config-ui.mjs --root /path/to/DSH_HOME/memory/temporal
 | `memory_forget` | Physical delete plus tombstone; removes matching sentences from journals and the fact from concept pages, marking affected pages `needs-update` |
 | `memory_health` | Layer status, counts, retention and cleanup notes, config errors and sources, timings. Lightweight by default; `deep=true` scans malformed lines, shards, journals, and full config |
 | `memory_compile` | Optional plugin: merge stable records per topic into concept pages with rules, no LLM; human-edited pages only receive candidates |
+
+For human-edited pages, an unchanged candidate keeps a manually confirmed page `active`; only new candidate
+evidence reopens `needs-review`. Explicit `needs-update` is preserved. A closed supersession chain remains
+history and does not by itself mark an automatic page `needs-update`.
 
 `memory_search` returns one of: `ok`, `partial`, `no_data`, `no_match`, `out_of_retention`,
 `l0_unavailable`, `no_l0_sessions`, `invalid_query`, `permission_denied`, `error`. These are kept
@@ -537,7 +541,7 @@ L4  用户 / Agent 画像       每月一次，可选，规则归纳
 | `privacy.enhanced` | `false` | 对常见个人信息做更严格的本地标记；凭据始终硬脱敏 |
 | `growth.enabled` | `false` | L4 月度成长开关：根据上月证据修订软画像 |
 | `compile.minRecords` | `2` | `memory_compile` 成页所需的同主题记录数 |
-| `compile.maxTopics` | `20` | 单次编译的主题上限 |
+| `compile.maxTopics` | `20` | 单次编译的主题上限；`0` 关闭自动编译 |
 | `ui.host` / `ui.port` | `127.0.0.1` / `18790` | 兼容字段；宿主不再监听。独立配置台读取该值，仅回环地址 |
 
 设置页保存是**全量写入**：保存过一次后，`config.json` 的值就会一直优先于代码默认值。每个字段标注生效来源；被 profile patch 覆盖的字段在页面上只读。
@@ -564,6 +568,8 @@ node scripts/config-ui.mjs --root /path/to/DSH_HOME/memory/temporal
 | `memory_forget` | 物理删除正文并写墓碑；从日记移除命中句、从概念页移除被删事实并标 `needs-update` |
 | `memory_health` | 分层状态、计数、保留期与清理提示、配置错误与来源、分项耗时。默认轻量，`deep=true` 才扫描坏行、分片、日记明细与完整配置 |
 | `memory_compile` | 可选插件：按主题把稳定记录规则式合并为概念页，不调模型；人工页只追加候选 |
+
+人工页候选不变时，人工确认后的 `active` 保持稳定；只有新证据使候选变化才重新进入 `needs-review`，显式 `needs-update` 不会被自动洗掉。已闭合的 supersede 链属于历史，不再单独让自动页永久停留 `needs-update`。
 
 `memory_search` 的状态取值为：`ok`、`partial`、`no_data`、`no_match`、`out_of_retention`、`l0_unavailable`、`no_l0_sessions`、`invalid_query`、`permission_denied`、`error`。这些状态刻意分开：空结果、超出保留期和 L0 接口故障，需要完全不同的回答。
 
