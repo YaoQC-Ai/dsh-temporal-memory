@@ -4,7 +4,7 @@ import os from 'node:os'
 import path from 'node:path'
 import test from 'node:test'
 import { apply, compileAll } from '../compile.js'
-import { conceptDir, listConcepts, readConcept, saveConcept } from '../lib/concepts.js'
+import { conceptDir, listConcepts, markConceptSourcesCorrected, readConcept, saveConcept } from '../lib/concepts.js'
 import { Store } from '../lib/store.js'
 import { zonedTimeToUtc } from '../lib/time.js'
 
@@ -276,4 +276,44 @@ test('已闭合的取代链是历史，不让自动页永久 needs-update', (t) 
   ])
   compileAll(store, root, { timeZone: TZ })
   assert.match(readConcept(root, '示例网关'), /状态: active/)
+})
+
+test('长文本更正的注记压成单行，不溢出到 candidate 标记外', (t) => {
+  const root = tmpRoot(t)
+  const dir = conceptDir(root)
+  fs.mkdirSync(dir, { recursive: true })
+  const file = path.join(dir, '测试概念.md')
+  // 矛盾章节非「（无）」+ 末尾候选块 → appendNote 走末尾追加分支，复现注记落到 candidate:end 之后的场景。
+  // 核心内容后必须有 ## 来源内容 界定边界，否则 replaceSectionBody 会一路替换到文件尾、吞掉候选块。
+  fs.writeFileSync(file, [
+    '---', '标题: 测试概念', '状态: active', '---', '',
+    '# 测试概念', '',
+    '## 核心内容', '', '旧结论 ZZOLD 需要被更正', '',
+    '## 来源内容', '', '- session/sess_a seq 1-2', '',
+    '来源记录:', '  - m_target', '',
+    '## 矛盾', '', '- 已有一条矛盾注记', '',
+    '<!-- auto:candidate:begin -->', '机器生成的候选内容', '<!-- auto:candidate:end -->', '',
+  ].join('\n'))
+  const longText = Array.from(
+    { length: 40 },
+    (_, i) => `ZZUNIQUE第${i}行：这是一段全新的更正内容，用来复现三 KB 级长文本更正`,
+  ).join('\n')
+  const count = markConceptSourcesCorrected(
+    root,
+    { id: 'm_target', text: '旧结论 ZZOLD 需要被更正' },
+    { id: 'm_corr', text: longText },
+  )
+  assert.equal(count, 1)
+  const md = fs.readFileSync(file, 'utf8')
+  const noteLines = md.split('\n').filter((l) => l.includes('已更正为'))
+  assert.equal(noteLines.length, 1)
+  assert.match(noteLines[0], /^- \d{4}-\d{2}-\d{2}T/)
+  // 修复前：note 里的换行会把后续行以裸文本溢出到 candidate:end 之外，且删不掉。
+  // 只看 candidate:end 之后的尾部——核心内容里的 ZZUNIQUE 是 replaceSectionBody 写入的合法正文。
+  const tail = md.slice(md.indexOf('<!-- auto:candidate:end -->'))
+  assert.ok(!tail.split('\n').some((l) => /^ZZUNIQUE第\d+行/.test(l)), '更正注记溢出到 candidate:end 之外')
+  const begin = md.indexOf('<!-- auto:candidate:begin -->')
+  const end = md.indexOf('<!-- auto:candidate:end -->')
+  assert.ok(begin >= 0 && end > begin, '候选块结构被破坏')
+  assert.match(md, /状态: needs-update/)
 })

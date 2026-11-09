@@ -4,6 +4,15 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.4] - 2026-11-03
+
+### Fixed
+
+- `appendNote` flattens the note to a single line. A long correction whose text contains newlines used to
+  spill the dated note into multiple lines whose unprefixed continuation landed outside the
+  `auto:candidate:end` marker, truncated mid-sentence, and survived later compiles. The fix covers
+  correction, deletion, and invalidation notes alike.
+
 ## [1.4.3] - 2026-11-03
 
 ### Fixed
