@@ -4,6 +4,17 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.5] - 2026-11-05
+
+### Changed
+
+- Verified against the DSH `0.2.2-rc.1` source tree: every host touchpoint this plugin relies on is
+  unchanged (step injection payload, session events, `sessionQuery`, tool registration and its
+  `output` contract, `webServer` prefix routes, the `settings.section` slot, `__ModuleLoader__`, and
+  the bundled cordis runtime are byte-identical where it matters), so no runtime code change was
+  required. The declared range `>=0.2.1-rc.3 <0.3.0-0` already covered `0.2.2-rc.1`.
+- README and compatibility notes updated for the `0.2.2-rc.1` source-level verification.
+
 ## [1.4.4] - 2026-11-03
 
 ### Fixed

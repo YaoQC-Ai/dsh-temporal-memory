@@ -1,6 +1,6 @@
 {
   "name": "dsh-temporal-memory",
-  "version": "1.4.4",
+  "version": "1.4.5",
   "description": "Temporal layered memory for DeepSeek-Harness (dsh): dual timestamps, day recall, corrections, and selective recall injection. / 为 DSH 提供带事件时间与有效期的分层记忆。",
   "author": "yaoqc-ai",
   "license": "MIT",

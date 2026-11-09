@@ -82,8 +82,9 @@ memory would file it under the 9th and lose the day it actually happened.
 
 ## Quick start
 
-**Requirements:** DSH `0.2.1-rc.3`, Node.js ≥ 20. The peer range also allows `0.2.1-rc.4`, but only
-rc.3 has been verified. DSH `0.3.x` is not verified yet; the peer range `<0.3.0-0` blocks installation
+**Requirements:** DSH `>=0.2.1-rc.3 <0.3.0-0` (declared in `engines.dsh`), Node.js ≥ 20. The plugin is
+runtime-verified on DSH `0.2.1-rc.3`; `0.2.2-rc.1` has been verified against its source tree (all host
+touchpoints unchanged) but not yet exercised at runtime. DSH `0.3.x` is blocked by the declared range
 by design.
 
 **1. Install the package into the DSH profile that loads plugins.**
@@ -284,9 +285,10 @@ answers.
 
 ## Compatibility and limitations
 
-- Verified against DSH `0.2.1-rc.3` (the peer range also allows `0.2.1-rc.4`, unverified); DSH `0.3.x`
-  is untested and blocked by the peer range.
-  Node ≥ 20 (developed and tested on 24.x).
+- Verified against DSH `0.2.1-rc.3` at runtime, and against the `0.2.2-rc.1` source tree (no host
+  touchpoint changed; runtime check pending). The declared range `>=0.2.1-rc.3 <0.3.0-0` admits
+  `0.2.2-rc.1` and blocks `0.3.x`, so an incompatible host refuses to load the plugin instead of
+  failing mid-session. Node ≥ 20 (developed and tested on 24.x).
 - **Chinese-first capture.** Time phrases and decision/preference/correction patterns are Chinese
   regexes. Explicit dates like `2026-10-12` work in any language, but English relative phrases are
   not parsed; an English sentence without an explicit date falls back to record time. Interface
@@ -414,8 +416,9 @@ DSH：10 月 7 日你们从 A 改成 B，理由是成本低约三成；8 日完�
 
 ## 快速开始
 
-**要求：** DSH `0.2.1-rc.3`，Node.js ≥ 20。peer 范围也允许 `0.2.1-rc.4`，但目前只核对过 rc.3。
-DSH `0.3.x` 尚未验证，peer 范围 `<0.3.0-0` 会主动阻止安装。
+**要求：** DSH `>=0.2.1-rc.3 <0.3.0-0`（由 `engines.dsh` 声明），Node.js ≥ 20。插件已在 DSH `0.2.1-rc.3`
+上做运行时验证；`0.2.2-rc.1` 已按其源码逐触点核对（本插件用到的宿主接口均未变化），尚未做运行时验证。
+DSH `0.3.x` 被声明的版本区间按设计阻止。
 
 **1. 把包装进加载插件的 DSH profile。**
 
@@ -584,7 +587,7 @@ node scripts/config-ui.mjs --root /path/to/DSH_HOME/memory/temporal
 
 ## 兼容性与限制
 
-- 已按 DSH `0.2.1-rc.3` 核对（peer 范围也允许 `0.2.1-rc.4`，尚未验证）；`0.3.x` 未验证并被 peer 范围阻止。Node ≥ 20（开发与测试在 24.x）。
+- 已在 DSH `0.2.1-rc.3` 上做运行时验证，并已按 `0.2.2-rc.1` 源码逐触点核对（无宿主接口变化，运行时验证待做）。声明的版本区间 `>=0.2.1-rc.3 <0.3.0-0` 允许 `0.2.2-rc.1`、阻止 `0.3.x`：不兼容的宿主会拒绝加载插件，而不是在对话中途出错。Node ≥ 20（开发与测试在 24.x）。
 - **捕获面向中文。** 时间短语和「决定 / 偏好 / 更正」句式是中文正则；`2026-10-12` 这类显式日期任何语言都可用，但英文相对时间不会被解析，句内没有显式日期时按写入时刻落。界面文案（设置页、注入标签、工具摘要）为中文。
 - **规则捕获，不是语义理解。** 隐含决定、长段落里的多处时间可能漏抽或归到同一天。
 - **字面检索。** 无向量；同义词、错别字、纯语义近似不召回。

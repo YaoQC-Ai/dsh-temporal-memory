@@ -150,13 +150,13 @@ test('普通偏好默认不标 private', () => {
 })
 
 test('隐私开关只加严普通个人信息，不删除正文', () => {
-  const plain = run('我的手机号是 13800138000').records[0]
+  const plain = run('我的手机号是 13800000000').records[0]
   assert.equal(plain.sensitivity, 'normal')
-  const enhanced = run('我的手机号是 13800138000', {
+  const enhanced = run('我的手机号是 13800000000', {
     config: { timeZone: TZ, maxRecordsPerTurn: 8, privacy: { enhanced: true } },
   }).records[0]
   assert.equal(enhanced.sensitivity, 'private')
-  assert.match(enhanced.text, /13800138000/)
+  assert.match(enhanced.text, /13800000000/)
 })
 
 test('凭据脱敏不受隐私开关影响', () => {

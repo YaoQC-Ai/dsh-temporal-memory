@@ -182,11 +182,11 @@ test('新页面的索引写入所属 namespace', (t) => {
 
 test('重复 topic/entity 不让单条记录凑够门槛，来源 id 也不重复', (t) => {
   const root = tmpRoot(t)
-  const store = seed(root, [rec({ id: 'm_dup', topics: ['主人'], entities: ['主人'] })])
+  const store = seed(root, [rec({ id: 'm_dup', topics: ['部署'], entities: ['部署'] })])
   assert.equal(compileAll(store, root, { timeZone: TZ, minRecords: 2 }).pages.length, 0)
-  store.append([rec({ id: 'm_dup_2', topics: ['主人'], entities: ['主人'], event_start_ms: AT(21) })])
+  store.append([rec({ id: 'm_dup_2', topics: ['部署'], entities: ['部署'], event_start_ms: AT(21) })])
   assert.equal(compileAll(store, root, { timeZone: TZ, minRecords: 2 }).pages.length, 1)
-  const md = readConcept(root, '主人')
+  const md = readConcept(root, '部署')
   assert.equal(md.match(/^  - m_dup$/gm).length, 1)
   assert.doesNotMatch(md, /命名空间: undefined/)
 })
